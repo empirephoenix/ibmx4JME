@@ -1,0 +1,139 @@
+import java.text.SimpleDateFormat;
+
+apply plugin: 'com.jfrog.bintray'
+apply plugin: 'java'
+apply plugin: 'maven'
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+apply plugin: "sonar-runner"
+
+
+/////////////////git version logic///////////////
+def cmd = "git show -s --pretty=format:%ct_%h"//"git rev-parse --short HEAD"
+def proc = cmd.execute()
+String[] gitInfos = proc.text.trim().split('_')
+//allow build with no cmd git installed
+if( gitInfos.length < 2 ) {
+	gitInfos = [(new Date()).getTime().toString(), "2" ]
+}
+String gitRevision = gitInfos[1]
+SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd_HHmmss")
+String gitTimestamp = format.format(new Date(Long.parseLong(gitInfos[0])*1000));
+
+def env = System.getenv()
+def mainBuildVersion = "1";
+//jenkins part
+def buildVersion = (env.BUILD_NUMBER) ?
+		mainBuildVersion+"."+env.BUILD_NUMBER+"."+gitTimestamp+"-"+gitRevision
+		: mainBuildVersion+".dev."+gitTimestamp+"-"+gitRevision
+;
+print("Build is based on " + buildVersion);
+/////////////////git version logic///////////////
+
+
+
+
+sourceCompatibility=JavaVersion.VERSION_1_8
+compileJava.options.encoding = 'UTF-8'
+
+version = "1.0.0-Snapshot";
+group = "com.jme3x"
+
+repositories {
+	mavenCentral()
+	maven { url "http://updates.jmonkeyengine.org/maven/"}
+}
+
+configurations { provided }
+
+sourceSets {
+	main { compileClasspath += configurations.provided }
+	test { compileClasspath += configurations.provided }
+}
+sourceSets.main.resources.srcDir 'src/main/java'
+
+def v_slf4j = '1.7.7'
+def v_jme3 = '3.0.10'
+dependencies {
+	compile "org.slf4j:slf4j-api:${v_slf4j}"
+	provided "com.jme3:jme3-core:${v_jme3}"
+	provided "com.jme3:jme3-desktop:${v_jme3}"
+	provided "com.jme3:jme3-lwjgl:${v_jme3}"
+	testRuntime "org.slf4j:slf4j-jdk14:${v_slf4j}"
+}
+
+task packageSources(type: Jar) {
+	from sourceSets.main.allSource
+	classifier = 'sources'
+}
+
+artifacts {
+	archives(packageSources) { type = 'jar' }
+}
+
+eclipse {
+	classpath {
+		plusConfigurations += [configurations.provided]
+		noExportConfigurations += [configurations.provided]
+	}
+}
+idea {
+	module {
+		scopes.PROVIDED.plus += [configurations.provided]
+	}
+}
+
+buildscript {
+	repositories { jcenter() }
+	dependencies { classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:0.5' }
+}
+
+jar {
+	manifest { attributes("Implementation-Version": buildVersion) }
+}
+
+sonarRunner {
+	sonarProperties {
+		property "sonar.host.url", sonarUrl
+		property "sonar.jdbc.url", sonarDBUrl
+		property "sonar.jdbc.driverClassName", sonarDBDriver
+		property "sonar.jdbc.username", sonarDBUser
+		property "sonar.jdbc.password", sonarDBPw
+		property "sonar.login",sonarUser
+		property "sonar.password",sonarPw
+		property "sonar.sourceEncoding", "UTF-8"
+		property "sonar.projectName", "IBMX-4-JME"
+	}
+}
+
+uploadArchives {
+	repositories {
+		mavenDeployer {
+			repository(url: "$targetRepository/releases") {
+				authentication(userName: targetRepository_user, password: targetRepository_password)
+			}
+		}
+	}
+}
+
+
+bintray {
+	user = targetRepository_user
+	key = targetRepository_password
+
+	configurations = ['archives']
+	//publications = ['maven'] //When uploading Maven-based publication files
+	dryRun = false //Whether to run this as dry-run, without deploying
+	publish = true //If version should be auto published after an upload
+	pkg {
+		repo = 'VGS-OSS-Releases'
+		name = project.name
+		desc = "ibmx audio loader"
+		websiteUrl = "https://github.com/empirephoenix/ibmx4JME"
+		issueTrackerUrl = "https://github.com/empirephoenix/ibmx4JME/issues"
+		vcsUrl = "https://github.com/empirephoenix/ibmx4JME.git"
+		licenses = ['BSD']
+		labels = ['jmonkeyengine', 'sound']
+		publicDownloadNumbers = true
+	}
+}
