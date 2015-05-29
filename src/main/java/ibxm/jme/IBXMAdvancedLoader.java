@@ -26,6 +26,9 @@ public class IBXMAdvancedLoader {
 	private AudioData			audiodata;
 
 	public IBXMAdvancedLoader(final AssetInfo assetInfo, final INoteListener listener) throws IOException {
+		if (assetInfo == null) {
+			throw new RuntimeException("Supplied assetinfo invalid " + assetInfo);
+		}
 		assert assetInfo.getKey() instanceof AudioKey;
 		final AudioKey audioKey = (AudioKey) assetInfo.getKey();
 

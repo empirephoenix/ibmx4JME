@@ -1,17 +1,19 @@
 package ibxm;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /*
  ProTracker, Scream Tracker 3, FastTracker 2 Replay (c)2015 mumart@gmail.com
  */
 public class IBXM {
-	public static final String	VERSION			= "a70dev (c)2015 mumart@gmail.com";
+	public static final String	VERSION				= "a70dev (c)2015 mumart@gmail.com";
 
-	private List<INoteListener>	noteListeners	= new ArrayList<>();
+	private List<INoteListener>	noteListeners		= new ArrayList<>();
 
-	private float				curt			= 0;
+	private float				curt				= 0;
 	private Module				module;
 	private int[]				rampBuf;
 	private Channel[]			channels;
@@ -20,10 +22,15 @@ public class IBXM {
 	private int					speed, tempo, plCount, plChannel;
 	private GlobalVol			globalVol;
 	private Note				note;
+	Map<Instrument, Integer>	instrumentLookup	= new HashMap<Instrument, Integer>();
 
 	/* Play the specified Module at the specified sampling rate. */
 	public IBXM(final Module module, final int samplingRate) {
 		this.module = module;
+		for (int i = 0; i < module.instruments.length; i++) {
+			this.instrumentLookup.put(module.instruments[i], i);
+		}
+
 		this.setSampleRate(samplingRate);
 		this.interpolation = Channel.LINEAR;
 		this.rampBuf = new int[128];
@@ -176,7 +183,7 @@ public class IBXM {
 		for (int idx = 0, a1 = 0; a1 < 256; idx += 2, a1 += rampRate) {
 			final int a2 = 256 - a1;
 			mixBuf[idx] = (mixBuf[idx] * a1 + this.rampBuf[idx] * a2) >> 8;
-		mixBuf[idx + 1] = (mixBuf[idx + 1] * a1 + this.rampBuf[idx + 1] * a2) >> 8;
+			mixBuf[idx + 1] = (mixBuf[idx + 1] * a1 + this.rampBuf[idx + 1] * a2) >> 8;
 		}
 		System.arraycopy(mixBuf, tickLen * 2, this.rampBuf, 0, 128);
 	}
@@ -315,9 +322,10 @@ public class IBXM {
 		return songEnd;
 	}
 
-	public void onChannelnote(final int id, final int noteVol, final int noteKey, final int fadeOutVol) {
+	public void onChannelnote(final int id, final int noteVol, final int noteKey, final int globalValume, final Instrument instrument) {
+		final int instrumentId = this.instrumentLookup.get(instrument);
 		for (final INoteListener list : this.noteListeners) {
-			list.onNote(this.curt, id, noteVol, noteKey, fadeOutVol);
+			list.onNote(this.curt, id, noteVol, noteKey, globalValume, instrumentId);
 		}
 	}
 
