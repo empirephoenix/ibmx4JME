@@ -2,6 +2,7 @@ package ibxm.jme;
 
 import ibxm.Channel;
 import ibxm.IBXM;
+import ibxm.INoteListener;
 import ibxm.Instrument;
 import ibxm.Module;
 import ibxm.WavInputStream;
@@ -12,19 +13,19 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 
 import com.jme3.asset.AssetInfo;
-import com.jme3.asset.AssetLoader;
 import com.jme3.audio.AudioBuffer;
+import com.jme3.audio.AudioData;
 import com.jme3.audio.AudioKey;
 import com.jme3.audio.AudioStream;
 
-public class IBXMLoader implements AssetLoader {
+public class IBXMAdvancedLoader {
 	private static final int	SAMPLE_RATE	= 48000, FADE_SECONDS = 16, REVERB_MILLIS = 50;
 	private int					duration;
 	private Module				module;
 	private IBXM				ibxm;
+	private AudioData			audiodata;
 
-	@Override
-	public Object load(final AssetInfo assetInfo) throws IOException {
+	public IBXMAdvancedLoader(final AssetInfo assetInfo, final INoteListener listener) throws IOException {
 		assert assetInfo.getKey() instanceof AudioKey;
 		final AudioKey audioKey = (AudioKey) assetInfo.getKey();
 
@@ -32,12 +33,12 @@ public class IBXMLoader implements AssetLoader {
 		final InputStream inputStream = assetInfo.openStream();
 		try {
 			this.module = new Module(inputStream);
-			final IBXM ibxm = new IBXM(this.module, IBXMLoader.SAMPLE_RATE);
+			final IBXM ibxm = new IBXM(this.module, IBXMAdvancedLoader.SAMPLE_RATE);
 			ibxm.setInterpolation(Channel.SINC);
 			this.duration = ibxm.calculateSongDuration();
 			final String songName = this.module.songName.trim();
 			System.out.println("Loading " + songName);
-			System.out.println("Song size estimated: " + (ibxm.calculateSongDuration() / IBXMLoader.SAMPLE_RATE));
+			System.out.println("Song size estimated: " + (ibxm.calculateSongDuration() / IBXMAdvancedLoader.SAMPLE_RATE));
 			final Instrument[] instruments = this.module.instruments;
 			for (int idx = 0, len = instruments.length; idx < len; idx++) {
 				final String name = instruments[idx].name;
@@ -46,6 +47,8 @@ public class IBXMLoader implements AssetLoader {
 				}
 			}
 			this.ibxm = ibxm;
+			this.ibxm.addNoteListener(listener);
+
 		} finally {
 			inputStream.close();
 		}
@@ -55,9 +58,9 @@ public class IBXMLoader implements AssetLoader {
 		if (audioKey.isStream()) {
 			System.out.println("Streaming");
 			final AudioStream as = new com.jme3.audio.AudioStream();
-			as.setupFormat(2, 16, IBXMLoader.SAMPLE_RATE);
+			as.setupFormat(2, 16, IBXMAdvancedLoader.SAMPLE_RATE);
 			as.updateData(ins, -1);
-			return as;
+			this.audiodata = as;
 		} else {
 			System.out.println("Buffered");
 			final ByteArrayOutputStream boutCache = new ByteArrayOutputStream();
@@ -76,10 +79,13 @@ public class IBXMLoader implements AssetLoader {
 			final ByteBuffer nativePCM = ByteBuffer.allocateDirect(dataArray.length);
 			nativePCM.put(dataArray);
 			final AudioBuffer as = new AudioBuffer();
-			as.setupFormat(2, 16, IBXMLoader.SAMPLE_RATE);
+			as.setupFormat(2, 16, IBXMAdvancedLoader.SAMPLE_RATE);
 			as.updateData(nativePCM);
-			return as;
+			this.audiodata = as;
 		}
-		// return player.getAudioData();
+	}
+
+	public AudioData getAudioData() {
+		return this.audiodata;
 	}
 }
