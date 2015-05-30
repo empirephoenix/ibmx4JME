@@ -322,10 +322,16 @@ public class IBXM {
 		return songEnd;
 	}
 
-	public void onChannelnote(final int id, final int noteVol, final int noteKey, final int globalValume, final Instrument instrument) {
-		final int instrumentId = this.instrumentLookup.get(instrument);
+	public void onChannelnote(final int id, final int noteVol, final int noteKey, final int globalValume, final Instrument instrument, final int panning) {
+		int instrumentId = 0;
+		if (this.instrumentLookup != null) {
+			final Integer instrumentIdOrNull = this.instrumentLookup.get(instrument);
+			if (instrumentIdOrNull != null) {
+				instrumentId = instrumentIdOrNull;
+			}
+		}
 		for (final INoteListener list : this.noteListeners) {
-			list.onNote(this.curt, id, noteVol, noteKey, globalValume, instrumentId);
+			list.onNote(this.curt, id, noteVol, noteKey, globalValume, instrumentId, panning);
 		}
 	}
 

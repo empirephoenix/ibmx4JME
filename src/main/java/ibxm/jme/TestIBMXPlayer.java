@@ -56,8 +56,8 @@ public class TestIBMXPlayer extends SimpleApplication {
 			final IBXMAdvancedLoader al = new IBXMAdvancedLoader(loadInfo, new INoteListener() {
 
 				@Override
-				public void onNote(final float posInSec, final int note, final int volume, final int noteKey, final int fadeoutVol, final int instrumentId) {
-					TestIBMXPlayer.this.todispatch.put(posInSec, new NoteInfo(note, volume, noteKey, fadeoutVol, instrumentId));
+				public void onNote(final float posInSec, final int note, final int volume, final int noteKey, final int fadeoutVol, final int instrumentId, final int panning) {
+					TestIBMXPlayer.this.todispatch.put(posInSec, new NoteInfo(note, volume, noteKey, fadeoutVol, instrumentId, panning));
 				}
 			});
 			this.anode = new AudioNode(al.getAudioData(), ak);
