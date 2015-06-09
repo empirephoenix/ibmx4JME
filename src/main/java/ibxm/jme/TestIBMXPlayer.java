@@ -56,8 +56,8 @@ public class TestIBMXPlayer extends SimpleApplication {
 			final IBXMAdvancedLoader al = new IBXMAdvancedLoader(loadInfo, new INoteListener() {
 
 				@Override
-				public void onNote(final float posInSec, final int note, final int volume, final int noteKey, final int fadeoutVol, final int instrumentId, final int panning) {
-					TestIBMXPlayer.this.todispatch.put(posInSec, new NoteInfo(note, volume, noteKey, fadeoutVol, instrumentId, panning));
+				public void onNote(final float posInSec, final int note, final int volume, final int noteKey, final int fadeoutVol, final int instrumentId, final int panning, int freq) {
+					TestIBMXPlayer.this.todispatch.put(posInSec, new NoteInfo(note, volume, noteKey, fadeoutVol, instrumentId, panning, freq));
 				}
 			});
 			this.anode = new AudioNode(al.getAudioData(), ak);
@@ -83,7 +83,7 @@ public class TestIBMXPlayer extends SimpleApplication {
 			if (ee.getKey() < this.playtime) {
 				final NoteInfo note = ee.getValue();
 				removeKeys.add(ee.getKey());
-				final int channel = note.note % 3;
+				final int channel = note.id % 3;
 				if (channel == 0) {
 					this.ncolor.b = note.volume / 64f * note.globalVolume / 64f;
 					fb = false;
@@ -96,7 +96,7 @@ public class TestIBMXPlayer extends SimpleApplication {
 					this.ncolor.r = note.volume / 64f * note.globalVolume / 64f;
 					fr = false;
 				}
-				System.out.println(note.note + " " + note.noteKey + " " + note.globalVolume);
+				System.out.println(note.id + " " + note.noteKey + " " + note.globalVolume);
 			}
 		}
 		for (final Float r : removeKeys) {

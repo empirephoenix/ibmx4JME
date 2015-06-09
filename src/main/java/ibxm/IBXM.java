@@ -9,20 +9,22 @@ import java.util.Map;
  ProTracker, Scream Tracker 3, FastTracker 2 Replay (c)2015 mumart@gmail.com
  */
 public class IBXM {
-	public static final String	VERSION				= "a70dev (c)2015 mumart@gmail.com";
+	public static final String		VERSION				= "a70dev (c)2015 mumart@gmail.com";
 
-	private List<INoteListener>	noteListeners		= new ArrayList<>();
+	private List<INoteListener>		noteListeners		= new ArrayList<>();
 
-	private float				curt				= 0;
-	private Module				module;
-	private int[]				rampBuf;
-	private Channel[]			channels;
-	private int					sampleRate, interpolation;
-	private int					seqPos, breakSeqPos, row, nextRow, tick;
-	private int					speed, tempo, plCount, plChannel;
-	private GlobalVol			globalVol;
-	private Note				note;
-	Map<Instrument, Integer>	instrumentLookup	= new HashMap<Instrument, Integer>();
+	private float					curt				= 0;
+	private Module					module;
+	private int[]					rampBuf;
+	private Channel[]				channels;
+	private int						sampleRate, interpolation;
+	private int						seqPos, breakSeqPos, row, nextRow, tick;
+	private int						speed, tempo, plCount, plChannel;
+	private GlobalVol				globalVol;
+	private Note					note;
+	Map<Instrument, Integer>		instrumentLookup	= new HashMap<Instrument, Integer>();
+
+	private Map<Integer, Integer>	lastKey				= new HashMap<>();
 
 	/* Play the specified Module at the specified sampling rate. */
 	public IBXM(final Module module, final int samplingRate) {
@@ -183,7 +185,7 @@ public class IBXM {
 		for (int idx = 0, a1 = 0; a1 < 256; idx += 2, a1 += rampRate) {
 			final int a2 = 256 - a1;
 			mixBuf[idx] = (mixBuf[idx] * a1 + this.rampBuf[idx] * a2) >> 8;
-			mixBuf[idx + 1] = (mixBuf[idx + 1] * a1 + this.rampBuf[idx + 1] * a2) >> 8;
+		mixBuf[idx + 1] = (mixBuf[idx + 1] * a1 + this.rampBuf[idx + 1] * a2) >> 8;
 		}
 		System.arraycopy(mixBuf, tickLen * 2, this.rampBuf, 0, 128);
 	}
@@ -318,11 +320,13 @@ public class IBXM {
 				this.tick = this.speed + this.speed * this.note.param;
 				break;
 			}
+
 		}
 		return songEnd;
 	}
 
-	public void onChannelnote(final int id, final int noteVol, final int noteKey, final int globalValume, final Instrument instrument, final int panning) {
+	public void onChannelnote(final int id, final int noteVol, final int noteKey, final int globalValume, final Instrument instrument, final int panning, int freq) {
+		this.lastKey.put(id, noteKey);
 		int instrumentId = 0;
 		if (this.instrumentLookup != null) {
 			final Integer instrumentIdOrNull = this.instrumentLookup.get(instrument);
@@ -331,7 +335,7 @@ public class IBXM {
 			}
 		}
 		for (final INoteListener list : this.noteListeners) {
-			list.onNote(this.curt, id, noteVol, noteKey, globalValume, instrumentId, panning);
+			list.onNote(this.curt, id, noteVol, noteKey, globalValume, instrumentId, panning, freq);
 		}
 	}
 
@@ -342,4 +346,5 @@ public class IBXM {
 	public void removeNoteListener(final INoteListener notelistener) {
 		this.noteListeners.remove(notelistener);
 	}
+
 }

@@ -4,9 +4,9 @@ public class Channel {
 	public static final int			NEAREST		= 0, LINEAR = 1, SINC = 2;
 
 	private static int[]			exp2Table	= { 32768, 32946, 33125, 33305, 33486, 33667, 33850, 34034, 34219, 34405, 34591, 34779, 34968, 35158, 35349, 35541, 35734, 35928, 36123, 36319, 36516, 36715, 36914, 37114, 37316, 37518, 37722, 37927,
-			38133, 38340, 38548, 38757, 38968, 39180, 39392, 39606, 39821, 40037, 40255, 40473, 40693, 40914, 41136, 41360, 41584, 41810, 42037, 42265, 42495, 42726, 42958, 43191, 43425, 43661, 43898, 44137, 44376, 44617, 44859, 45103, 45348, 45594,
-			45842, 46091, 46341, 46593, 46846, 47100, 47356, 47613, 47871, 48131, 48393, 48655, 48920, 49185, 49452, 49721, 49991, 50262, 50535, 50810, 51085, 51363, 51642, 51922, 52204, 52488, 52773, 53059, 53347, 53637, 53928, 54221, 54515, 54811,
-			55109, 55408, 55709, 56012, 56316, 56622, 56929, 57238, 57549, 57861, 58176, 58491, 58809, 59128, 59449, 59772, 60097, 60423, 60751, 61081, 61413, 61746, 62081, 62419, 62757, 63098, 63441, 63785, 64132, 64480, 64830, 65182, 65536 };
+		38133, 38340, 38548, 38757, 38968, 39180, 39392, 39606, 39821, 40037, 40255, 40473, 40693, 40914, 41136, 41360, 41584, 41810, 42037, 42265, 42495, 42726, 42958, 43191, 43425, 43661, 43898, 44137, 44376, 44617, 44859, 45103, 45348, 45594,
+		45842, 46091, 46341, 46593, 46846, 47100, 47356, 47613, 47871, 48131, 48393, 48655, 48920, 49185, 49452, 49721, 49991, 50262, 50535, 50810, 51085, 51363, 51642, 51922, 52204, 52488, 52773, 53059, 53347, 53637, 53928, 54221, 54515, 54811,
+		55109, 55408, 55709, 56012, 56316, 56622, 56929, 57238, 57549, 57861, 58176, 58491, 58809, 59128, 59449, 59772, 60097, 60423, 60751, 61081, 61413, 61746, 62081, 62419, 62757, 63098, 63441, 63785, 64132, 64480, 64830, 65182, 65536 };
 
 	private static final short[]	sineTable	= { 0, 24, 49, 74, 97, 120, 141, 161, 180, 197, 212, 224, 235, 244, 250, 253, 255, 253, 250, 244, 235, 224, 212, 197, 180, 161, 141, 120, 97, 74, 49, 24 };
 
@@ -421,9 +421,6 @@ public class Channel {
 		this.calculateFrequency();
 		this.calculateAmplitude();
 		this.updateEnvelopes();
-		if (this.noteKey > 0) {
-			this.player.onChannelnote(this.id, this.volume, this.noteKey, this.globalVol.volume, this.instrument, this.panning);
-		}
 	}
 
 	private void updateEnvelopes() {
@@ -679,13 +676,13 @@ public class Channel {
 		}
 		vol = (vol * this.module.gain * Sample.FP_ONE) >> 13;
 		vol = (vol * this.fadeOutVol) >> 15;
-		this.ampl = (vol * this.globalVol.volume * envVol) >> 12;
-		int envPan = 32;
-		if (this.instrument.panningEnvelope.enabled) {
-			envPan = this.instrument.panningEnvelope.calculateAmpl(this.panEnvTick);
-		}
-		final int panRange = (this.panning < 128) ? this.panning : (255 - this.panning);
-		this.pann = this.panning + (panRange * (envPan - 32) >> 5);
+			this.ampl = (vol * this.globalVol.volume * envVol) >> 12;
+			int envPan = 32;
+			if (this.instrument.panningEnvelope.enabled) {
+				envPan = this.instrument.panningEnvelope.calculateAmpl(this.panEnvTick);
+			}
+			final int panRange = (this.panning < 128) ? this.panning : (255 - this.panning);
+			this.pann = this.panning + (panRange * (envPan - 32) >> 5);
 	}
 
 	private void trigger() {
@@ -749,6 +746,7 @@ public class Channel {
 			if (this.noteKey > 96) {
 				this.keyOn = false;
 			} else {
+
 				final boolean isPorta = (this.noteVol & 0xF0) == 0xF0 || this.noteEffect == 0x03 || this.noteEffect == 0x05 || this.noteEffect == 0x87 || this.noteEffect == 0x8C;
 				if (!isPorta) {
 					this.sample = this.instrument.samples[this.instrument.keyToSample[this.noteKey]];
@@ -785,16 +783,20 @@ public class Channel {
 					}
 					this.retrigCount = this.autoVibratoCount = 0;
 				}
+
+				if (this.keyOn) {
+					this.player.onChannelnote(this.id, this.volume, this.noteKey, this.globalVol.volume, this.instrument, this.panning, this.freq);
+				}
 			}
 		}
 	}
 
 	public static int exp2(final int x) {
 		final int x0 = (x & Sample.FP_MASK) >> (Sample.FP_SHIFT - 7);
-		final int c = Channel.exp2Table[x0];
-		final int m = Channel.exp2Table[x0 + 1] - c;
-		final int y = (m * (x & (Sample.FP_MASK >> 7)) >> 8) + c;
-		return (y << Sample.FP_SHIFT) >> (Sample.FP_SHIFT - (x >> Sample.FP_SHIFT));
+					final int c = Channel.exp2Table[x0];
+					final int m = Channel.exp2Table[x0 + 1] - c;
+					final int y = (m * (x & (Sample.FP_MASK >> 7)) >> 8) + c;
+					return (y << Sample.FP_SHIFT) >> (Sample.FP_SHIFT - (x >> Sample.FP_SHIFT));
 	}
 
 	public static int log2(final int x) {
